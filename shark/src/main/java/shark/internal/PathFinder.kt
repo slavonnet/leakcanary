@@ -315,11 +315,11 @@ internal class PathFinder(
             enqueue(NormalRootNode(gcRoot.id, gcRoot))
           } else {
             val (threadInstance, threadRoot) = threadPair
-            val threadName = threadNames[threadInstance] ?: {
+            val threadName = threadNames[threadInstance] ?: run {
               val name = threadInstance[Thread::class, "name"]?.value?.readAsJavaString() ?: ""
               threadNames[threadInstance] = name
               name
-            }()
+            }
             val referenceMatcher = threadNameReferenceMatchers[threadName]
 
             if (referenceMatcher !is IgnoredReferenceMatcher) {
@@ -402,7 +402,7 @@ internal class PathFinder(
         graph.objectExists(gcRoot.id)
       }
       .map { graph.findObjectById(it.id) to it }
-      .sortedWith(Comparator { (graphObject1, root1), (graphObject2, root2) ->
+      .sortedWith { (graphObject1, root1), (graphObject2, root2) ->
         // Sorting based on pattern name first. In reverse order so that ThreadObject is before JavaLocalPattern
         val gcRootTypeComparison = root2::class.java.name.compareTo(root1::class.java.name)
         if (gcRootTypeComparison != 0) {
@@ -410,7 +410,7 @@ internal class PathFinder(
         } else {
           rootClassName(graphObject1).compareTo(rootClassName(graphObject2))
         }
-      })
+      }
   }
 
   private fun State.visitClassRecord(
@@ -627,6 +627,8 @@ internal class PathFinder(
       (node as ChildNode).parent.objectId
     }
 
+    // Note: when computing dominators, this has a side effects of updating
+    // the dominator for node.objectId.
     val alreadyEnqueued = visitTracker.visited(node.objectId, parentObjectId)
 
     if (alreadyEnqueued) {
